@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Tryb standalone tworzy malutki serwer specjalnie na VPS z małym RAM
+  output: "standalone",
   // Wyłącz strict mode w produkcji jeśli powoduje problemy z re-renderami
   reactStrictMode: true,
 
