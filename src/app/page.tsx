@@ -1,0 +1,36 @@
+import { redirect } from 'next/navigation';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * Strona główna — przekierowanie oparte na roli
+ * Zalogowany admin → /admin
+ * Zalogowany client_rep → /app
+ * Niezalogowany → /login
+ */
+export default async function HomePage() {
+  const supabase = await createServerSupabaseClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role === 'admin') {
+    redirect('/admin');
+  } else if (profile?.role === 'client_rep') {
+    redirect('/app');
+  } else {
+    // Brak profilu — wyloguj i wróć do logowania
+    await supabase.auth.signOut();
+    redirect('/login');
+  }
+}
