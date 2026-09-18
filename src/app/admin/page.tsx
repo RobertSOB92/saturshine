@@ -26,8 +26,7 @@ export default function AdminDashboardPage() {
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [clients, setClients] = useState<Client[]>([]);
 
-  const { tickets, loading, pendingCount, refetch } = useTickets({
-    statusFilter,
+  const { tickets: allTickets, loading, pendingCount, refetch } = useTickets({
     enableRealtime: true,
   });
 
@@ -36,9 +35,14 @@ export default function AdminDashboardPage() {
   }, []);
 
   // Filtrowanie po kliencie
-  const filteredTickets = clientFilter === 'all'
-    ? tickets
-    : tickets.filter(t => t.client_id === clientFilter);
+  const filteredTicketsByClient = clientFilter === 'all'
+    ? allTickets
+    : allTickets.filter(t => t.client_id === clientFilter);
+
+  // Filtrowanie po statusie
+  const filteredTickets = statusFilter === 'all'
+    ? filteredTicketsByClient
+    : filteredTicketsByClient.filter(t => t.status === statusFilter);
 
   const statusTabs: Array<{ label: string; value: TicketStatus | 'all' }> = [
     { label: 'Wszystkie', value: 'all' },
@@ -170,9 +174,9 @@ export default function AdminDashboardPage() {
         {/* Statystyki summary */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: 'Oczekujące', value: tickets.filter(t => t.status === 'pending').length, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
-            { label: 'W trakcie', value: tickets.filter(t => t.status === 'in_progress').length, color: 'text-sky-600', bg: 'bg-sky-50 border-sky-100' },
-            { label: 'Rozwiązane', value: tickets.filter(t => t.status === 'resolved').length, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' },
+            { label: 'Oczekujące', value: filteredTicketsByClient.filter(t => t.status === 'pending').length, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
+            { label: 'W trakcie', value: filteredTicketsByClient.filter(t => t.status === 'in_progress').length, color: 'text-sky-600', bg: 'bg-sky-50 border-sky-100' },
+            { label: 'Rozwiązane', value: filteredTicketsByClient.filter(t => t.status === 'resolved').length, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' },
           ].map(stat => (
             <div key={stat.label} className={`rounded-2xl p-3 border ${stat.bg}`}>
               <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>

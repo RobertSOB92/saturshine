@@ -14,30 +14,33 @@ export default function ClientAppPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
 
-  const { tickets, loading, error, refetch } = useTickets({
+  const { tickets: allTickets, loading, error, refetch } = useTickets({
     clientId: profile?.client_id ?? undefined,
-    statusFilter,
   });
+
+  const tickets = statusFilter === 'all'
+    ? allTickets
+    : allTickets.filter(t => t.status === statusFilter);
 
   const clientName = profile?.client?.name ?? 'Twój obiekt';
   const firstName = profile?.full_name?.split(' ')[0] ?? 'Witaj';
 
   const statusTabs: Array<{ label: string; value: TicketStatus | 'all'; count?: number }> = [
-    { label: 'Wszystkie', value: 'all', count: tickets.length },
+    { label: 'Wszystkie', value: 'all', count: allTickets.length },
     {
       label: 'Oczekujące',
       value: 'pending',
-      count: tickets.filter(t => t.status === 'pending').length,
+      count: allTickets.filter(t => t.status === 'pending').length,
     },
     {
       label: 'W trakcie',
       value: 'in_progress',
-      count: tickets.filter(t => t.status === 'in_progress').length,
+      count: allTickets.filter(t => t.status === 'in_progress').length,
     },
     {
       label: 'Rozwiązane',
       value: 'resolved',
-      count: tickets.filter(t => t.status === 'resolved').length,
+      count: allTickets.filter(t => t.status === 'resolved').length,
     },
   ];
 
@@ -98,7 +101,7 @@ export default function ClientAppPage() {
               `}
             >
               {tab.label}
-              {tab.count !== undefined && tab.count > 0 && (
+              {tab.count !== undefined && (
                 <span
                   className={`
                     min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-xs px-1
