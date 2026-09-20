@@ -19,28 +19,31 @@ export const ticketService = {
    */
   async createTicket(payload: CreateTicketPayload): Promise<{ data: Ticket | null; error: string | null }> {
     try {
-      // 1. Kompresja zdjęcia
-      const compressedFile = await compressImage(payload.photoFile);
+      let storagePath: string | null = null;
 
-      // 2. Upload do Supabase Storage
-      const storagePath = generateStoragePath(
-        payload.client_id,
-        'tickets',
-        compressedFile.name
-      );
+      // 1. Opcjonalna kompresja i upload zdjęcia
+      if (payload.photoFile) {
+        const compressedFile = await compressImage(payload.photoFile);
 
-      const { error: uploadError } = await supabase.storage
-        .from('ticket-photos')
-        .upload(storagePath, compressedFile, {
-          contentType: 'image/jpeg',
-          cacheControl: '3600',
-        });
+        storagePath = generateStoragePath(
+          payload.client_id,
+          'tickets',
+          compressedFile.name
+        );
 
-      if (uploadError) {
-        return { data: null, error: `Błąd przesyłania zdjęcia: ${uploadError.message}` };
+        const { error: uploadError } = await supabase.storage
+          .from('ticket-photos')
+          .upload(storagePath, compressedFile, {
+            contentType: 'image/jpeg',
+            cacheControl: '3600',
+          });
+
+        if (uploadError) {
+          return { data: null, error: `Błąd przesyłania zdjęcia: ${uploadError.message}` };
+        }
       }
 
-      // 3. Pobierz ID zalogowanego użytkownika
+      // 2. Pobierz ID zalogowanego użytkownika
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         return { data: null, error: 'Brak autoryzacji.' };
@@ -62,7 +65,9 @@ export const ticketService = {
 
       if (insertError) {
         // Spróbuj usunąć uploadowane zdjęcie jeśli zapis do DB się nie powiódł
-        await supabase.storage.from('ticket-photos').remove([storagePath]);
+        if (storagePath) {
+          await supabase.storage.from('ticket-photos').remove([storagePath]);
+        }
         return { data: null, error: `Błąd tworzenia zgłoszenia: ${insertError.message}` };
       }
 

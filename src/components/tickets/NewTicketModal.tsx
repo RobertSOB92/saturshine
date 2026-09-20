@@ -12,7 +12,7 @@ import { TICKET_AREAS } from '@/types';
 interface NewTicketModalProps {
   isOpen: boolean;
   onClose: () => void;
-  clientId: string;
+  clients: { id: string; name: string }[];
   onSuccess: () => void;
 }
 
@@ -21,10 +21,11 @@ type Step = 1 | 2 | 3;
 export function NewTicketModal({
   isOpen,
   onClose,
-  clientId,
+  clients,
   onSuccess,
 }: NewTicketModalProps) {
   const [step, setStep] = useState<Step>(1);
+  const [selectedClientId, setSelectedClientId] = useState<string>(clients[0]?.id ?? '');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [area, setArea] = useState<string>(TICKET_AREAS[0]);
@@ -40,6 +41,7 @@ export function NewTicketModal({
     setPhotoPreview(null);
     setArea(TICKET_AREAS[0]);
     setDescription('');
+    setSelectedClientId(clients[0]?.id ?? '');
     setError(null);
     setSuccess(false);
     setLoading(false);
@@ -73,8 +75,8 @@ export function NewTicketModal({
   };
 
   const handleSubmit = async () => {
-    if (!photoFile || !area || !description.trim()) {
-      setError('Uzupełnij wszystkie pola przed wysłaniem.');
+    if (!area || !description.trim()) {
+      setError('Uzupełnij wymagane pola przed wysłaniem.');
       return;
     }
 
@@ -83,7 +85,7 @@ export function NewTicketModal({
     setStep(3);
 
     const { error: submitError } = await ticketService.createTicket({
-      client_id: clientId,
+      client_id: selectedClientId || clients[0]?.id,
       area,
       description: description.trim(),
       photoFile,
@@ -192,6 +194,12 @@ export function NewTicketModal({
               onChange={handlePhotoChange}
               className="sr-only"
             />
+            
+            <div className="pt-2">
+              <Button variant="secondary" size="md" onClick={() => setStep(2)} fullWidth>
+                Pomiń zdjęcie (opcjonalnie)
+              </Button>
+            </div>
           </div>
         )}
 
@@ -215,6 +223,28 @@ export function NewTicketModal({
                 >
                   <X size={16} />
                 </button>
+              </div>
+            )}
+
+            {/* Wybór obiektu (jeśli ma więcej niż 1) */}
+            {clients.length > 1 && (
+              <div className="flex flex-col gap-1.5 pb-1">
+                <label htmlFor="ticket-client" className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                  Obiekt <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    id="ticket-client"
+                    value={selectedClientId}
+                    onChange={e => setSelectedClientId(e.target.value)}
+                    className="w-full appearance-none px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 bg-white text-slate-900 text-sm input-ring focus:outline-none"
+                  >
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
               </div>
             )}
 

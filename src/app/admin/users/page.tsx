@@ -16,9 +16,8 @@ interface UserRecord {
   id: string;
   full_name: string;
   role: UserRole;
-  client_id: string | null;
   created_at: string;
-  client?: Client | null;
+  clients?: Client[];
 }
 
 export default function AdminUsersPage() {
@@ -32,10 +31,16 @@ export default function AdminUsersPage() {
   const fetchData = async () => {
     setLoading(true);
     const [usersRes, clientsData] = await Promise.all([
-      supabase.from('profiles').select('*, client:clients(*)').order('created_at', { ascending: false }),
+      supabase.from('profiles').select('*, profile_clients(clients(*))').order('created_at', { ascending: false }),
       clientService.getAll(),
     ]);
-    setUsers((usersRes.data as UserRecord[]) ?? []);
+    
+    const formattedUsers = (usersRes.data || []).map((u: any) => ({
+      ...u,
+      clients: u.profile_clients?.map((pc: any) => pc.clients).filter(Boolean) || [],
+    }));
+    
+    setUsers(formattedUsers as UserRecord[]);
     setClients(clientsData);
     setLoading(false);
   };
@@ -111,9 +116,9 @@ export default function AdminUsersPage() {
                         {roleLabel[user.role]}
                       </span>
                     </div>
-                    {user.client && (
+                    {user.clients && user.clients.length > 0 && (
                       <p className="text-sm text-slate-400 truncate mt-0.5">
-                        🏢 {user.client.name}
+                        🏢 {user.clients.map(c => c.name).join(', ')}
                       </p>
                     )}
                   </div>
@@ -153,7 +158,7 @@ function CreateUserModal({
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<UserRole>('client_rep');
-  const [clientId, setClientId] = useState('');
+  const [clientIds, setClientIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -163,7 +168,7 @@ function CreateUserModal({
       setPassword('');
       setFullName('');
       setRole('client_rep');
-      setClientId('');
+      setClientIds([]);
       setError(null);
     }
   }, [isOpen]);
@@ -173,8 +178,8 @@ function CreateUserModal({
     setLoading(true);
     setError(null);
 
-    if (role === 'client_rep' && !clientId) {
-      setError('Wybierz obiekt dla zarządcy nieruchomości.');
+    if (role === 'client_rep' && clientIds.length === 0) {
+      setError('Wybierz przynajmniej jeden obiekt dla zarządcy nieruchomości.');
       setLoading(false);
       return;
     }
@@ -184,7 +189,7 @@ function CreateUserModal({
       password,
       full_name: fullName.trim(),
       role,
-      client_id: clientId || 'no-client', // admin może nie mieć client_id
+      client_ids: clientIds,
     };
 
     const result = await userService.createUser(payload);
@@ -200,7 +205,7 @@ function CreateUserModal({
   };
 
   const isValid = email.trim() && password.length >= 8 && fullName.trim() &&
-    (role === 'admin' || clientId);
+    (role === 'admin' || clientIds.length > 0);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Nowe konto użytkownika" size="md">
@@ -282,18 +287,22 @@ function CreateUserModal({
             <label htmlFor="user-client" className="text-sm font-medium text-slate-700">
               Obiekt <span className="text-red-500">*</span>
             </label>
-            <select
-              id="user-client"
-              value={clientId}
-              onChange={e => setClientId(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-sm input-ring focus:outline-none"
-              required
-            >
-              <option value="">Wybierz obiekt...</option>
+            <div className="flex flex-col gap-2 max-h-48 overflow-y-auto p-3 border border-slate-200 rounded-xl bg-white">
               {clients.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <label key={c.id} className="flex items-center gap-3 cursor-pointer p-1">
+                  <input
+                    type="checkbox"
+                    checked={clientIds.includes(c.id)}
+                    onChange={e => {
+                      if (e.target.checked) setClientIds([...clientIds, c.id]);
+                      else setClientIds(clientIds.filter(id => id !== c.id));
+                    }}
+                    className="w-4 h-4 text-emerald-500 rounded focus:ring-emerald-500"
+                  />
+                  <span className="text-sm text-slate-700">{c.name}</span>
+                </label>
               ))}
-            </select>
+            </div>
             {clients.length === 0 && (
               <p className="text-xs text-amber-600">
                 ⚠ Najpierw dodaj obiekt w zakładce "Obiekty".

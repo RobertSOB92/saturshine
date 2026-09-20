@@ -16,12 +16,11 @@ export interface Client {
 
 export interface Profile {
   id: string;
-  client_id: string | null;
   full_name: string;
   role: UserRole;
   created_at: string;
   // Relacje (opcjonalne, join)
-  client?: Client | null;
+  clients?: Client[];
 }
 
 export interface Ticket {
@@ -30,7 +29,7 @@ export interface Ticket {
   user_id: string;
   area: string;
   description: string;
-  photo_url: string;
+  photo_url?: string | null;
   resolution_photo_url?: string | null;
   admin_notes?: string | null;
   status: TicketStatus;
@@ -58,7 +57,7 @@ export interface CreateTicketPayload {
   client_id: string;
   area: string;
   description: string;
-  photoFile: File;
+  photoFile?: File | null;
 }
 
 // Payload dla aktualizacji zgłoszenia (przez admina)
@@ -80,7 +79,7 @@ export interface CreateUserPayload {
   email: string;
   password: string;
   full_name: string;
-  client_id: string;
+  client_ids: string[];
   role: UserRole;
 }
 

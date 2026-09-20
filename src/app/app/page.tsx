@@ -14,15 +14,17 @@ export default function ClientAppPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
 
-  const { tickets: allTickets, loading, error, refetch } = useTickets({
-    clientId: profile?.client_id ?? undefined,
-  });
+  const { tickets: allTickets, loading, error, refetch } = useTickets({});
 
   const tickets = statusFilter === 'all'
     ? allTickets
     : allTickets.filter(t => t.status === statusFilter);
 
-  const clientName = profile?.client?.name ?? 'Twój obiekt';
+  const clientName = profile?.clients && profile.clients.length === 1 
+    ? profile.clients[0].name 
+    : profile?.clients && profile.clients.length > 1
+      ? 'Wiele obiektów'
+      : 'Brak przypisanych obiektów';
   const firstName = profile?.full_name?.split(' ')[0] ?? 'Witaj';
 
   const statusTabs: Array<{ label: string; value: TicketStatus | 'all'; count?: number }> = [
@@ -173,11 +175,11 @@ export default function ClientAppPage() {
       </main>
 
       {/* Modal nowego zgłoszenia */}
-      {profile?.client_id && (
+      {profile?.clients && profile.clients.length > 0 && (
         <NewTicketModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          clientId={profile.client_id}
+          clients={profile.clients}
           onSuccess={() => {
             setIsModalOpen(false);
             refetch();

@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Aktualizacja i Wdrażanie na serwer (Mikrus / VPS)
 
-## Getting Started
+Aplikacja jest skonfigurowana do budowania w trybie `standalone` (zoptymalizowana wersja dla serwerów bez Vercela). Aby przygotować nową paczkę z poprawkami i wgrać ją na serwer, wykonaj poniższe kroki:
 
-First, run the development server:
-
+### Krok 1: Zbudowanie aplikacji
+Zawsze gdy wprowadzisz zmiany w kodzie, musisz przebudować aplikację w swoim terminalu:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Krok 2: Przygotowanie plików
+Po udanym buildzie, aplikacja tworzy gotowe pliki serwera w folderze `.next/standalone`.
+Aby wygodnie przesłać całość na serwer, możesz skopiować pliki do folderu `gotowa-paczka-na-serwer`:
+```bash
+# Uwaga: poniższe komendy zadziałają w terminalu bash/zsh (np. na Macu)
+rm -rf gotowa-paczka-na-serwer/.next
+cp -r .next/standalone/ gotowa-paczka-na-serwer/
+mkdir -p gotowa-paczka-na-serwer/.next
+cp -r .next/static gotowa-paczka-na-serwer/.next/static
+cp -r public gotowa-paczka-na-serwer/public
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Krok 3: Wgranie na serwer
+Otwórz folder `gotowa-paczka-na-serwer` na swoim komputerze i **skopiuj całą jego zawartość** na swój serwer za pomocą klienta FTP/SFTP (np. FileZilla), nadpisując obecne pliki w folderze aplikacji.
+Nie musisz odpalać `npm install` na serwerze, ponieważ tryb `standalone` paczkuje od razu potrzebne zależności (folder `node_modules`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Krok 4: Restart na serwerze
+Połącz się z Mikrusem (lub innym serwerem) przez SSH i zrestartuj proces PM2, aby serwer wczytał nowe pliki:
+```bash
+# Sprawdź nazwę/ID swojej aplikacji
+pm2 list
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Zrestartuj używając nazwy lub ID
+pm2 restart saturshine 
+# (lub pm2 restart 0)
+```

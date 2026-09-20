@@ -38,11 +38,18 @@ export async function POST(req: NextRequest) {
 
     // 2. Parsuj payload
     const body: CreateUserPayload = await req.json();
-    const { email, password, full_name, client_id, role } = body;
+    const { email, password, full_name, client_ids, role } = body;
 
-    if (!email || !password || !full_name || !client_id || !role) {
+    if (!email || !password || !full_name || !role) {
       return NextResponse.json(
-        { error: 'Wymagane pola: email, password, full_name, client_id, role.' },
+        { error: 'Wymagane pola: email, password, full_name, role.' },
+        { status: 400 }
+      );
+    }
+
+    if (role === 'client_rep' && (!client_ids || client_ids.length === 0)) {
+      return NextResponse.json(
+        { error: 'Administrator budynku musi mieć przypisany co najmniej jeden budynek.' },
         { status: 400 }
       );
     }
@@ -95,7 +102,6 @@ export async function POST(req: NextRequest) {
       .from('profiles')
       .insert({
         id: newUser.user.id,
-        client_id: role === 'client_rep' ? client_id : null,
         full_name,
         role,
       })
@@ -109,6 +115,23 @@ export async function POST(req: NextRequest) {
         { error: `Błąd tworzenia profilu: ${profileError.message}` },
         { status: 500 }
       );
+    }
+
+    // 5. Zapisz przypisania budynków do tabeli profile_clients
+    if (role === 'client_rep' && client_ids.length > 0) {
+      const { error: profileClientsError } = await adminSupabase
+        .from('profile_clients')
+        .insert(
+          client_ids.map(clientId => ({
+            profile_id: profile.id,
+            client_id: clientId
+          }))
+        );
+
+      if (profileClientsError) {
+        console.error('Błąd przypisywania budynków:', profileClientsError);
+        // Opcjonalny rollback
+      }
     }
 
     return NextResponse.json({ profile }, { status: 201 });

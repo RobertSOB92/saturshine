@@ -31,7 +31,7 @@ export function useAuth() {
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*, client:clients(*)')
+      .select('*, profile_clients(clients(*))')
       .eq('id', userId)
       .single();
 
@@ -39,7 +39,14 @@ export function useAuth() {
       console.error('Błąd pobierania profilu:', error);
       return null;
     }
-    return data as Profile;
+    
+    // Formatowanie z relacji wiele-do-wielu
+    const formattedProfile = {
+      ...data,
+      clients: data.profile_clients?.map((pc: any) => pc.clients).filter(Boolean) || [],
+    };
+    
+    return formattedProfile as Profile;
   }, [supabase]);
 
   const redirectByRole = useCallback((role: UserRole) => {
