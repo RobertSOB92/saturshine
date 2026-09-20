@@ -18,9 +18,11 @@ export default function ClientLayout({
   // Ochrona routy — tylko client_rep
   useEffect(() => {
     if (!loading) {
-      if (!user) {
+      if (!user || !profile) {
         router.replace('/login');
-      } else if (profile && profile.role !== 'client_rep') {
+      } else if (profile.requires_password_change) {
+        router.replace('/change-password');
+      } else if (profile.role !== 'client_rep') {
         router.replace('/admin');
       }
     }

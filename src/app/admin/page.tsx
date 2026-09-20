@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   Sparkles, LogOut, Bell, Filter, Users, Building2,
-  Clock, MapPin, User, ChevronRight, ImageOff, RefreshCw, Settings
+  Clock, MapPin, User, ChevronRight, ImageOff, RefreshCw, Settings, KeyRound
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { useTickets } from '@/lib/hooks/useTickets';
 import { TicketDetail } from '@/components/tickets/TicketDetail';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -25,6 +26,7 @@ export default function AdminDashboardPage() {
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [clients, setClients] = useState<Client[]>([]);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const { tickets: allTickets, loading, pendingCount, refetch } = useTickets({
     enableRealtime: true,
@@ -109,6 +111,13 @@ export default function AdminDashboardPage() {
                 <Users size={18} />
               </Link>
 
+              <button
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Zmień hasło"
+              >
+                <KeyRound size={18} />
+              </button>
               <button
                 onClick={signOut}
                 className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
@@ -223,6 +232,12 @@ export default function AdminDashboardPage() {
           }}
         />
       )}
+
+      {/* Modal zmiany hasła */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
     </div>
   );
 }

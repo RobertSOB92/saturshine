@@ -83,4 +83,29 @@ export const userService = {
       return { success: false, error: `Błąd sieci: ${(error as Error).message}` };
     }
   },
+
+  /**
+   * Resetuje hasło użytkownika przez admina (wymaga roli admin)
+   * Ustawia hasło i wymusza jego zmianę po pierwszym logowaniu
+   */
+  async adminResetPassword(userId: string, newPassword: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const response = await fetch('/api/auth/admin-reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, newPassword }),
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Błąd resetowania hasła.' };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      return { success: false, error: `Błąd sieci: ${(error as Error).message}` };
+    }
+  },
 };

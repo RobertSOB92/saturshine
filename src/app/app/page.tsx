@@ -1,18 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, LogOut, Sparkles, Bell, RefreshCw } from 'lucide-react';
+import { Plus, LogOut, Sparkles, Bell, RefreshCw, KeyRound } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTickets } from '@/lib/hooks/useTickets';
 import { NewTicketModal } from '@/components/tickets/NewTicketModal';
 import { TicketCard } from '@/components/tickets/TicketCard';
 import { Button } from '@/components/ui/Button';
 import { TicketStatus } from '@/types';
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
 export default function ClientAppPage() {
   const { user, profile, signOut } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const { tickets: allTickets, loading, error, refetch } = useTickets({});
 
@@ -70,6 +72,13 @@ export default function ClientAppPage() {
                 aria-label="Odśwież"
               >
                 <RefreshCw size={18} />
+              </button>
+              <button
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Zmień hasło"
+              >
+                <KeyRound size={18} />
               </button>
               <button
                 onClick={signOut}
@@ -186,6 +195,12 @@ export default function ClientAppPage() {
           }}
         />
       )}
+
+      {/* Modal zmiany hasła */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
     </div>
   );
 }

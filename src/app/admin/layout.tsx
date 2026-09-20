@@ -17,9 +17,11 @@ export default function AdminLayout({
   // Ochrona routy — tylko admin
   useEffect(() => {
     if (!loading) {
-      if (!user) {
+      if (!user || !profile) {
         router.replace('/login');
-      } else if (profile && profile.role !== 'admin') {
+      } else if (profile.requires_password_change) {
+        router.replace('/change-password');
+      } else if (profile.role !== 'admin') {
         router.replace('/app');
       }
     }

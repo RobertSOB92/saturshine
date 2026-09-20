@@ -49,10 +49,15 @@ export function useAuth() {
     return formattedProfile as Profile;
   }, [supabase]);
 
-  const redirectByRole = useCallback((role: UserRole) => {
-    if (role === 'admin') {
+  const redirectByRole = useCallback((profile: Profile) => {
+    if (profile.requires_password_change) {
+      router.replace('/change-password');
+      return;
+    }
+
+    if (profile.role === 'admin') {
       router.replace('/admin');
-    } else if (role === 'client_rep') {
+    } else if (profile.role === 'client_rep') {
       router.replace('/app');
     }
   }, [router]);
@@ -149,8 +154,8 @@ export function useAuth() {
         error: null,
       });
 
-      if (profile?.role) {
-        redirectByRole(profile.role);
+      if (profile) {
+        redirectByRole(profile);
       }
     }
 

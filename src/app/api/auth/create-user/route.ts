@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
         id: newUser.user.id,
         full_name,
         role,
+        requires_password_change: true,
       })
       .select()
       .single();

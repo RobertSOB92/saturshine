@@ -205,6 +205,7 @@ function CreateUserModal({
   const [clientIds, setClientIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{email: string, password: string, fullName: string} | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -214,6 +215,7 @@ function CreateUserModal({
       setRole('client_rep');
       setClientIds([]);
       setError(null);
+      setCreatedCredentials(null);
     }
   }, [isOpen]);
 
@@ -243,10 +245,60 @@ function CreateUserModal({
     if (result.error) {
       setError(result.error);
     } else {
-      onSuccess();
-      onClose();
+      setCreatedCredentials({ email, password, fullName });
+      onSuccess(); // odśwież listę w tle
     }
   };
+
+  const handleClose = () => {
+    onClose();
+  };
+
+  if (createdCredentials) {
+    const emailBody = `Cześć ${createdCredentials.fullName},
+
+Zostało dla Ciebie utworzone konto w systemie zgłoszeń SaturShine.
+
+Strona logowania: ${window.location.origin}/login
+Twój login (email): ${createdCredentials.email}
+Tymczasowe hasło: ${createdCredentials.password}
+
+Uwaga: Przy pierwszym logowaniu system wymusi na Tobie zmianę hasła na własne.
+
+Pozdrawiamy,
+Zespół SaturShine`;
+
+    return (
+      <Modal isOpen={isOpen} onClose={handleClose} title="Konto utworzone!" size="md">
+        <div className="p-5 space-y-4">
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm">
+            Konto zostało pomyślnie utworzone. Poniżej znajduje się treść wiadomości, którą możesz skopiować i wysłać użytkownikowi.
+          </div>
+          <div className="relative">
+            <textarea
+              readOnly
+              value={emailBody}
+              className="w-full h-48 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-sm font-mono focus:outline-none"
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              className="absolute top-2 right-2"
+              onClick={() => {
+                navigator.clipboard.writeText(emailBody);
+                alert('Skopiowano do schowka!');
+              }}
+            >
+              Kopiuj
+            </Button>
+          </div>
+          <Button variant="primary" size="md" onClick={handleClose} fullWidth>
+            Zamknij
+          </Button>
+        </div>
+      </Modal>
+    );
+  }
 
   const isValid = email.trim() && password.length >= 8 && fullName.trim() &&
     (role === 'admin' || clientIds.length > 0);
@@ -402,6 +454,8 @@ function EditUserModal({
   const [role, setRole] = useState<UserRole>(user.role);
   const [clientIds, setClientIds] = useState<string[]>(user.clients?.map(c => c.id) || []);
   const [loading, setLoading] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [newPasswordInfo, setNewPasswordInfo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -410,6 +464,7 @@ function EditUserModal({
       setRole(user.role);
       setClientIds(user.clients?.map(c => c.id) || []);
       setError(null);
+      setNewPasswordInfo(null);
     }
   }, [isOpen, user]);
 
@@ -439,6 +494,30 @@ function EditUserModal({
       setError(result.error);
     } else {
       onSuccess();
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!window.confirm('Czy na pewno chcesz zresetować hasło temu użytkownikowi? Nowe hasło zostanie wygenerowane, a użytkownik będzie musiał je zmienić po zalogowaniu.')) return;
+    
+    setResettingPassword(true);
+    setError(null);
+    
+    // Generuj losowe 10-znakowe hasło
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let tempPass = "";
+    for (let i = 0, n = charset.length; i < 10; ++i) {
+        tempPass += charset.charAt(Math.floor(Math.random() * n));
+    }
+
+    const { success, error } = await userService.adminResetPassword(user.id, tempPass);
+    
+    setResettingPassword(false);
+    
+    if (!success) {
+      setError(error || 'Błąd resetowania hasła');
+    } else {
+      setNewPasswordInfo(`Hasło zresetowane! Nowe hasło tymczasowe to: ${tempPass}`);
     }
   };
 
@@ -521,7 +600,25 @@ function EditUserModal({
           </div>
         )}
 
-        <div className="flex gap-3 pb-2">
+        {newPasswordInfo && (
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-medium">
+            {newPasswordInfo}
+          </div>
+        )}
+
+        <div className="pt-2 border-t border-slate-100">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleResetPassword}
+            loading={resettingPassword}
+          >
+            Wygeneruj nowe hasło
+          </Button>
+        </div>
+
+        <div className="flex gap-3 pb-2 pt-2">
           <Button variant="secondary" size="md" onClick={onClose} type="button" fullWidth>
             Anuluj
           </Button>
