@@ -18,6 +18,7 @@ export interface Profile {
   id: string;
   full_name: string;
   role: UserRole;
+  requires_password_change: boolean;
   created_at: string;
   // Relacje (opcjonalne, join)
   clients?: Client[];
