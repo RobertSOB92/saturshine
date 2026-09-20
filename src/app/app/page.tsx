@@ -6,8 +6,9 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useTickets } from '@/lib/hooks/useTickets';
 import { NewTicketModal } from '@/components/tickets/NewTicketModal';
 import { TicketCard } from '@/components/tickets/TicketCard';
+import { TicketDetail } from '@/components/tickets/TicketDetail';
 import { Button } from '@/components/ui/Button';
-import { TicketStatus } from '@/types';
+import { Ticket, TicketStatus } from '@/types';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
 export default function ClientAppPage() {
@@ -15,6 +16,7 @@ export default function ClientAppPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
   const { tickets: allTickets, loading, error, refetch } = useTickets({});
 
@@ -75,10 +77,11 @@ export default function ClientAppPage() {
               </button>
               <button
                 onClick={() => setIsPasswordModalOpen(true)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors text-sm font-medium"
                 aria-label="Zmień hasło"
               >
-                <KeyRound size={18} />
+                <KeyRound size={16} />
+                <span className="hidden sm:inline">Zmień hasło</span>
               </button>
               <button
                 onClick={signOut}
@@ -177,7 +180,11 @@ export default function ClientAppPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {tickets.map(ticket => (
-              <TicketCard key={ticket.id} ticket={ticket} />
+              <TicketCard 
+                key={ticket.id} 
+                ticket={ticket} 
+                onClick={(t) => setSelectedTicket(t)} 
+              />
             ))}
           </div>
         )}
@@ -192,6 +199,19 @@ export default function ClientAppPage() {
           onSuccess={() => {
             setIsModalOpen(false);
             refetch();
+          }}
+        />
+      )}
+
+      {/* Modal szczegółów zgłoszenia (np. z notatkami admina) */}
+      {selectedTicket && (
+        <TicketDetail
+          ticket={selectedTicket}
+          isOpen={!!selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+          onUpdated={() => {
+            refetch();
+            setSelectedTicket(null);
           }}
         />
       )}

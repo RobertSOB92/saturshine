@@ -113,10 +113,11 @@ export default function AdminDashboardPage() {
 
               <button
                 onClick={() => setIsPasswordModalOpen(true)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors text-sm font-medium"
                 aria-label="Zmień hasło"
               >
-                <KeyRound size={18} />
+                <KeyRound size={16} />
+                <span className="hidden sm:inline">Zmień hasło</span>
               </button>
               <button
                 onClick={signOut}

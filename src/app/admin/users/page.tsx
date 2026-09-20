@@ -457,6 +457,7 @@ function EditUserModal({
   const [resettingPassword, setResettingPassword] = useState(false);
   const [newPasswordInfo, setNewPasswordInfo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -465,6 +466,7 @@ function EditUserModal({
       setClientIds(user.clients?.map(c => c.id) || []);
       setError(null);
       setNewPasswordInfo(null);
+      setNewPassword('');
     }
   }, [isOpen, user]);
 
@@ -498,26 +500,21 @@ function EditUserModal({
   };
 
   const handleResetPassword = async () => {
-    if (!window.confirm('Czy na pewno chcesz zresetować hasło temu użytkownikowi? Nowe hasło zostanie wygenerowane, a użytkownik będzie musiał je zmienić po zalogowaniu.')) return;
+    if (!newPassword || newPassword.length < 6) return;
+    if (!window.confirm('Czy na pewno chcesz zmienić hasło temu użytkownikowi? Opcja wymusi na nim zmianę tego hasła po zalogowaniu.')) return;
     
     setResettingPassword(true);
     setError(null);
     
-    // Generuj losowe 10-znakowe hasło
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let tempPass = "";
-    for (let i = 0, n = charset.length; i < 10; ++i) {
-        tempPass += charset.charAt(Math.floor(Math.random() * n));
-    }
-
-    const { success, error } = await userService.adminResetPassword(user.id, tempPass);
+    const { success, error } = await userService.adminResetPassword(user.id, newPassword);
     
     setResettingPassword(false);
     
     if (!success) {
-      setError(error || 'Błąd resetowania hasła');
+      setError(error || 'Błąd zmiany hasła');
     } else {
-      setNewPasswordInfo(`Hasło zresetowane! Nowe hasło tymczasowe to: ${tempPass}`);
+      setNewPasswordInfo(`Hasło zostało pomyślnie zmienione na: ${newPassword}`);
+      setNewPassword('');
     }
   };
 
@@ -606,15 +603,24 @@ function EditUserModal({
           </div>
         )}
 
-        <div className="pt-2 border-t border-slate-100">
+        <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
+          <Input 
+            id="edit-new-password"
+            label="Zmień hasło użytkownika"
+            type="password"
+            placeholder="Wpisz nowe hasło..."
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+          />
           <Button
             type="button"
             variant="secondary"
             size="sm"
             onClick={handleResetPassword}
             loading={resettingPassword}
+            disabled={newPassword.length < 6}
           >
-            Wygeneruj nowe hasło
+            Zmień hasło i wymuś zmianę
           </Button>
         </div>
 
