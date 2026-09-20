@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Building2, MapPin, User, Pencil, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Building2, MapPin, User, Pencil, Sparkles, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
@@ -21,6 +21,19 @@ export default function AdminClientsPage() {
     setLoading(true);
     const data = await clientService.getAll();
     setClients(data);
+    setLoading(false);
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    if (!window.confirm('Czy na pewno chcesz usunąć ten obiekt? Zostaną usunięte również wszystkie powiązane zgłoszenia.')) return;
+    
+    setLoading(true);
+    const { success, error } = await clientService.delete(id);
+    if (!success) {
+      alert(error || 'Błąd usuwania klienta.');
+    } else {
+      await fetchClients();
+    }
     setLoading(false);
   };
 
@@ -104,13 +117,22 @@ export default function AdminClientsPage() {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => openEditModal(client)}
-                  className="p-2 rounded-xl text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                  aria-label="Edytuj"
-                >
-                  <Pencil size={16} />
-                </button>
+                <div className="flex flex-col gap-1.5 ml-2">
+                  <button
+                    onClick={() => openEditModal(client)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                    aria-label="Edytuj"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClient(client.id)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    aria-label="Usuń"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </Card>
             ))}
           </div>

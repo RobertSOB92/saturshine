@@ -57,4 +57,16 @@ export const clientService = {
     }
     return { data: data as Client, error: null };
   },
+
+  async delete(id: string): Promise<{ success: boolean; error: string | null }> {
+    const { error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      return { success: false, error: `Błąd usuwania klienta: ${error.message}` };
+    }
+    return { success: true, error: null };
+  },
 };

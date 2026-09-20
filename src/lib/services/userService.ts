@@ -1,4 +1,11 @@
-import { CreateUserPayload, ApiResponse, Profile } from '@/types';
+import { CreateUserPayload, ApiResponse, Profile, UserRole } from '@/types';
+
+export interface UpdateUserPayload {
+  id: string;
+  full_name: string;
+  role: UserRole;
+  client_ids: string[];
+}
 
 /**
  * Serwis do zarządzania użytkownikami
@@ -28,6 +35,52 @@ export const userService = {
       return { data: data.profile as Profile };
     } catch (error) {
       return { error: `Błąd sieci: ${(error as Error).message}` };
+    }
+  },
+
+  /**
+   * Aktualizuje profil użytkownika (wymaga roli admin)
+   */
+  async updateUser(payload: UpdateUserPayload): Promise<ApiResponse<Profile>> {
+    try {
+      const response = await fetch('/api/auth/update-user', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { error: data.error || 'Błąd aktualizacji użytkownika.' };
+      }
+
+      return { data: data.profile as Profile };
+    } catch (error) {
+      return { error: `Błąd sieci: ${(error as Error).message}` };
+    }
+  },
+
+  /**
+   * Usuwa konto użytkownika (wymaga roli admin)
+   */
+  async deleteUser(id: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const response = await fetch(`/api/auth/delete-user?id=${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Błąd usuwania użytkownika.' };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      return { success: false, error: `Błąd sieci: ${(error as Error).message}` };
     }
   },
 };

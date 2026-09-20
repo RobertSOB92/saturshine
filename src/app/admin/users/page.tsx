@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Users, Mail, Shield, User, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Users, Mail, Shield, User, AlertCircle, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
@@ -25,6 +25,7 @@ export default function AdminUsersPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
 
   const supabase = createClient();
 
@@ -46,6 +47,19 @@ export default function AdminUsersPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const handleDeleteUser = async (id: string, fullName: string) => {
+    if (!window.confirm(`Czy na pewno chcesz usunąć użytkownika ${fullName}? To usunie wszystkie powiązane dane (zgłoszenia itp.).`)) return;
+    
+    setLoading(true);
+    const { success, error } = await userService.deleteUser(id);
+    if (!success) {
+      alert(error || 'Błąd usuwania użytkownika.');
+      setLoading(false);
+    } else {
+      await fetchData();
+    }
+  };
 
   const roleLabel: Record<UserRole, string> = {
     admin: 'Administrator',
@@ -122,6 +136,22 @@ export default function AdminUsersPage() {
                       </p>
                     )}
                   </div>
+                  <div className="flex flex-col gap-1.5 ml-2">
+                    <button
+                      onClick={() => setEditingUser(user)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                      aria-label="Edytuj użytkownika"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(user.id, user.full_name)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      aria-label="Usuń użytkownika"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -136,6 +166,20 @@ export default function AdminUsersPage() {
         clients={clients}
         onSuccess={fetchData}
       />
+
+      {/* Modal edycji konta */}
+      {editingUser && (
+        <EditUserModal
+          isOpen={!!editingUser}
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          clients={clients}
+          onSuccess={() => {
+            setEditingUser(null);
+            fetchData();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -331,6 +375,165 @@ function CreateUserModal({
             fullWidth
           >
             Utwórz konto
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// ============================================================
+// Modal edycji konta użytkownika
+// ============================================================
+function EditUserModal({
+  isOpen,
+  onClose,
+  user,
+  clients,
+  onSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  user: UserRecord;
+  clients: Client[];
+  onSuccess: () => void;
+}) {
+  const [fullName, setFullName] = useState(user.full_name);
+  const [role, setRole] = useState<UserRole>(user.role);
+  const [clientIds, setClientIds] = useState<string[]>(user.clients?.map(c => c.id) || []);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFullName(user.full_name);
+      setRole(user.role);
+      setClientIds(user.clients?.map(c => c.id) || []);
+      setError(null);
+    }
+  }, [isOpen, user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    if (role === 'client_rep' && clientIds.length === 0) {
+      setError('Wybierz przynajmniej jeden obiekt dla zarządcy nieruchomości.');
+      setLoading(false);
+      return;
+    }
+
+    const payload = {
+      id: user.id,
+      full_name: fullName.trim(),
+      role,
+      client_ids: role === 'admin' ? [] : clientIds,
+    };
+
+    const result = await userService.updateUser(payload);
+
+    setLoading(false);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      onSuccess();
+    }
+  };
+
+  const isValid = fullName.trim() && (role === 'admin' || clientIds.length > 0);
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edycja użytkownika" size="md">
+      <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <Input
+          id="edit-user-fullname"
+          label="Imię i nazwisko"
+          required
+          placeholder="np. Jan Kowalski"
+          value={fullName}
+          onChange={e => setFullName(e.target.value)}
+        />
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-slate-700">Rola *</label>
+          <div className="flex gap-3">
+            {([
+              { value: 'client_rep' as UserRole, label: 'Zarządca', desc: 'Może zgłaszać usterki' },
+              { value: 'admin' as UserRole, label: 'Administrator', desc: 'Pełny dostęp' },
+            ] as const).map(opt => (
+              <label
+                key={opt.value}
+                className={`
+                  flex-1 flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all
+                  ${role === opt.value
+                    ? 'border-emerald-400 bg-emerald-50'
+                    : 'border-slate-200 hover:border-slate-300'
+                  }
+                `}
+              >
+                <input
+                  type="radio"
+                  name="edit-role"
+                  value={opt.value}
+                  checked={role === opt.value}
+                  onChange={() => setRole(opt.value)}
+                  className="mt-0.5 text-emerald-500"
+                />
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">{opt.label}</p>
+                  <p className="text-xs text-slate-400">{opt.desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {role === 'client_rep' && (
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="edit-user-client" className="text-sm font-medium text-slate-700">
+              Obiekt <span className="text-red-500">*</span>
+            </label>
+            <div className="flex flex-col gap-2 max-h-48 overflow-y-auto p-3 border border-slate-200 rounded-xl bg-white">
+              {clients.map(c => (
+                <label key={c.id} className="flex items-center gap-3 cursor-pointer p-1">
+                  <input
+                    type="checkbox"
+                    checked={clientIds.includes(c.id)}
+                    onChange={e => {
+                      if (e.target.checked) setClientIds([...clientIds, c.id]);
+                      else setClientIds(clientIds.filter(id => id !== c.id));
+                    }}
+                    className="w-4 h-4 text-emerald-500 rounded focus:ring-emerald-500"
+                  />
+                  <span className="text-sm text-slate-700">{c.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm flex items-center gap-2">
+            <AlertCircle size={16} className="flex-shrink-0" />
+            {error}
+          </div>
+        )}
+
+        <div className="flex gap-3 pb-2">
+          <Button variant="secondary" size="md" onClick={onClose} type="button" fullWidth>
+            Anuluj
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            type="submit"
+            loading={loading}
+            disabled={!isValid}
+            fullWidth
+          >
+            Zapisz zmiany
           </Button>
         </div>
       </form>
